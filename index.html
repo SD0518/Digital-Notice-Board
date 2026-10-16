@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart Notice Board - Dashboard</title>
+<style>
+:root{
+  --bg:#f3f5f9; --card:#fff; --text:#0f172a; --muted:#64748b; --line:#e5e9f0;
+  --primary:#1e3a8a; --primary-h:#1e40af; --navy:#0f1d4a;
+  --danger:#dc2626; --danger-h:#b91c1c; --ok:#16a34a;
+  --radius:12px; --shadow:0 1px 2px rgba(15,23,42,.06),0 2px 8px rgba(15,23,42,.04);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+.wrap{max-width:1280px;margin:0 auto;padding-inline:28px}
+.muted{color:var(--muted)}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s,opacity .15s;white-space:nowrap}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn-sm{padding:6px 12px;font-size:13px}
+.btn-block{width:100%}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--primary-h)}
+.btn-secondary{background:#fff;border-color:var(--line);color:var(--text)}
+.btn-secondary:hover:not(:disabled){background:#f8fafc;border-color:#cbd5e1}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover:not(:disabled){background:var(--danger-h)}
+.btn-danger-ghost{background:transparent;color:var(--danger);border-color:#fecaca}
+.btn-danger-ghost:hover:not(:disabled){background:#fef2f2}
+.btn-light{background:#fff;color:var(--danger)}
+.btn-ghost-dark{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18);color:#fff}
+.btn-ghost-dark:hover{background:rgba(255,255,255,.16)}
+.btn.loading{position:relative;color:transparent!important}
+.btn.loading::after{content:"";position:absolute;width:16px;height:16px;border:2px solid rgba(255,255,255,.6);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+.btn-secondary.loading::after,.btn-danger-ghost.loading::after{border-color:#94a3b8;border-top-color:transparent}
+@keyframes spin{to{transform:rotate(360deg)}}
+.icon-btn{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;color:var(--muted)}
+.icon-btn:hover{color:var(--primary);border-color:#c7d2fe;background:#eef2ff}
+.icon-btn.danger:hover{color:var(--danger);border-color:#fecaca;background:#fef2f2}
+.icon-btn svg{width:16px;height:16px}
+
+/* ---------- SOS banner ---------- */
+.sos-banner{background:var(--danger);color:#fff;position:sticky;top:0;z-index:30}
+.sos-inner{display:flex;align-items:center;gap:14px;padding-block:12px}
+.sos-inner b{letter-spacing:.06em}
+.sos-inner span.msg{flex:1;font-weight:500}
+.pulse{width:12px;height:12px;border-radius:50%;background:#fff;animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+
+/* ---------- Top bar ---------- */
+.topbar{background:var(--navy);color:#fff}
+.topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-block:14px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:40px;height:40px;border-radius:10px;background:#fff;color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:800;letter-spacing:-.02em}
+.brand-title{font-size:17px;font-weight:700}
+.brand-sub{font-size:12px;color:#a5b4fc}
+.top-right{display:flex;align-items:center;gap:22px}
+.conn{display:flex;align-items:center;gap:8px;font-weight:500;font-size:13px}
+.dot{width:9px;height:9px;border-radius:50%;background:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.25)}
+.dot.on{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.25)}
+.dot.off{background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.25)}
+.clock{text-align:right;line-height:1.2}
+.clock #clkTime{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.clock #clkDate{font-size:12px;color:#a5b4fc}
+.demo-tag{background:#fbbf24;color:#422006;font-size:11px;font-weight:800;letter-spacing:.08em;padding:3px 8px;border-radius:6px}
+
+/* ---------- Layout ---------- */
+main{padding-block:26px 40px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,#cbd5e1)}
+.stat-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.stat-value{font-size:28px;font-weight:700;margin-top:4px;line-height:1.2}
+.stat-note{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+.side{display:flex;flex-direction:column;gap:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-pad{padding:18px 20px}
+.card h2{font-size:16px;font-weight:700}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px 14px}
+.card-head p{font-size:13px}
+.card-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--line);font-size:13px}
+.section-title{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.section-title svg{width:18px;height:18px}
+
+/* ---------- Tabs ---------- */
+.tabs{display:flex;gap:4px;margin:0 20px 6px;padding:4px;background:#f1f5f9;border-radius:10px;width:fit-content}
+.tab{border:0;background:transparent;padding:6px 14px;border-radius:7px;font-weight:600;font-size:13px;color:var(--muted);cursor:pointer}
+.tab:hover{color:var(--text)}
+.tab.active{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(15,23,42,.1)}
+.tab .count{display:inline-block;min-width:20px;margin-left:6px;padding:0 6px;border-radius:10px;background:#e2e8f0;font-size:11px;text-align:center}
+.tab.active .count{background:#e0e7ff;color:var(--primary)}
+
+/* ---------- Notice list ---------- */
+.list{padding:8px 20px 14px;display:flex;flex-direction:column;gap:10px;min-height:120px}
+.row{display:flex;gap:16px;border:1px solid var(--line);border-left:4px solid var(--c);border-radius:10px;padding:14px 16px;background:#fff;transition:border-color .15s,box-shadow .15s}
+.row:hover{box-shadow:0 2px 10px rgba(15,23,42,.06)}
+.row.expired{background:#fafbfc}
+.row.expired .row-main{opacity:.6}
+.row-main{flex:1;min-width:0}
+.row-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.row h3{font-size:15px;font-weight:650;width:100%;margin-top:4px}
+.row p{color:#334155;font-size:13.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.row-meta{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
+.row-meta span{display:inline-flex;align-items:center;gap:5px}
+.row-meta svg{width:13px;height:13px}
+.row-side{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:10px}
+.row-actions{display:flex;gap:6px}
+.tag{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:2px 8px;border-radius:5px;color:#fff;background:var(--c)}
+.prio{font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;background:#f1f5f9;color:#475569}
+.prio.high{background:#fef3c7;color:#92400e}
+.prio.urgent{background:#fee2e2;color:#991b1b}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.b-active{background:#dcfce7;color:#15803d}
+.b-scheduled{background:#dbeafe;color:#1d4ed8}
+.b-expired{background:#f1f5f9;color:#64748b}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty b{display:block;color:var(--text);font-size:15px;margin-bottom:4px}
+
+/* ---------- Side cards ---------- */
+.emergency{border-color:#fecaca}
+.emergency .section-title{color:var(--danger)}
+.sos-big{width:100%;padding:14px;font-size:16px;letter-spacing:.08em;border-radius:10px}
+.sos-live{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;margin-bottom:12px;color:#991b1b}
+.sos-live b{display:flex;align-items:center;gap:8px;font-size:13px;letter-spacing:.05em}
+.sos-live .pulse{background:var(--danger);width:9px;height:9px}
+.controls{display:flex;flex-direction:column;gap:10px}
+.rotate{display:flex;align-items:center;gap:8px;padding-top:12px;margin-top:4px;border-top:1px solid var(--line)}
+.rotate label{flex:1;font-weight:500}
+.rotate input{width:64px;text-align:center}
+.idle{display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+.idle label{display:flex;justify-content:space-between;font-weight:500}
+.idle .counter{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.idle textarea{min-height:76px;resize:vertical}
+.idle .btn{align-self:flex-end}
+.kv{display:grid;grid-template-columns:1fr auto;row-gap:10px;font-size:13.5px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-weight:600;text-align:right}
+.ok-text{color:var(--ok)}
+.bad-text{color:var(--danger)}
+
+/* ---------- Form fields ---------- */
+.field{margin-bottom:18px}
+.field label,.field .label{display:flex;justify-content:space-between;font-weight:600;font-size:13px;margin-bottom:6px}
+.field .counter{font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums}
+.field .counter.warn{color:var(--danger)}
+.input{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px 12px;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
+.input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(30,58,138,.15)}
+.input.invalid{border-color:var(--danger)}
+textarea.input{resize:vertical;min-height:120px}
+.hint{font-size:12px;color:var(--muted);margin-top:5px}
+.err{font-size:12px;color:var(--danger);margin-top:5px;font-weight:500}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cat-wrap{position:relative}
+.cat-wrap .swatch{position:absolute;left:12px;top:50%;width:10px;height:10px;border-radius:3px;transform:translateY(-50%);background:var(--c);pointer-events:none}
+.cat-wrap select{padding-left:30px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #cbd5e1;border-radius:8px;overflow:hidden}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{margin:0;justify-content:center;padding:9px;cursor:pointer;font-weight:600;color:var(--muted);border-right:1px solid #cbd5e1}
+.seg label:last-of-type{border-right:0}
+.seg input:checked+label{background:#eef2ff;color:var(--primary)}
+.seg input[value=high]:checked+label{background:#fef3c7;color:#92400e}
+.seg input[value=urgent]:checked+label{background:#fee2e2;color:#991b1b}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid #cbd5e1;background:#fff;border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600;color:#334155;cursor:pointer}
+.chip:hover{border-color:var(--primary);color:var(--primary)}
+.chip.sel{background:#eef2ff;border-color:var(--primary);color:var(--primary)}
+
+/* ---------- Drawer ---------- */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:40;animation:fade .15s}
+@keyframes fade{from{opacity:0}}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(480px,100%);background:#fff;z-index:50;display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(15,23,42,.15);transform:translateX(100%);transition:transform .22s ease;visibility:hidden}
+.drawer.open{transform:none;visibility:visible}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--line)}
+.drawer-head h2{font-size:18px}
+.drawer-head p{font-size:13px}
+.drawer-body{flex:1;overflow:auto;padding:22px 24px}
+.drawer-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid var(--line);background:#fafbfc}
+
+/* ---------- Modal ---------- */
+.modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.5);animation:fade .15s}
+.modal-box{background:#fff;border-radius:14px;width:min(520px,100%);box-shadow:0 20px 50px rgba(15,23,42,.3);overflow:hidden}
+.modal-box.small{width:min(400px,100%)}
+.modal-body{padding:22px 24px}
+.modal-body h2{font-size:18px;margin-bottom:6px}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;background:#fafbfc;border-top:1px solid var(--line)}
+.modal-icon{width:44px;height:44px;border-radius:50%;background:#fee2e2;color:var(--danger);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.modal-icon svg{width:22px;height:22px}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.preset{text-align:left;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff;cursor:pointer;transition:border-color .15s,background .15s}
+.preset b{display:block;font-size:13px;letter-spacing:.04em}
+.preset span{font-size:12px;color:var(--muted)}
+.preset:hover{border-color:#fca5a5}
+.preset.sel{border-color:var(--danger);background:#fef2f2;box-shadow:0 0 0 2px rgba(220,38,38,.15)}
+.preset.sel b{color:var(--danger)}
+
+/* ---------- Toasts ---------- */
+.toasts{position:fixed;right:24px;bottom:24px;z-index:80;display:flex;flex-direction:column;gap:10px}
+.toast{min-width:260px;max-width:380px;padding:12px 16px;border-radius:10px;background:var(--navy);color:#fff;font-weight:500;box-shadow:0 10px 30px rgba(15,23,42,.25);border-left:4px solid #22c55e;animation:slide .2s ease}
+.toast.err{border-left-color:#ef4444}
+@keyframes slide{from{transform:translateY(10px);opacity:0}}
+
+/* ---------- Smaller screens ---------- */
+@media (max-width:980px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){
+  .wrap{padding-inline:16px}
+  .top-right{gap:12px}.conn span:last-child,.brand-sub{display:none}
+  .row{flex-direction:column}.row-side{flex-direction:row;align-items:center}
+  .two,.presets{grid-template-columns:1fr}
+  .tabs{width:auto;overflow-x:auto}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SOS BANNER - red strip at the very top.
+     Hidden normally; appears for every viewer while SOS is active
+     (started from the dashboard OR by holding the board's button).
+     ============================================================ -->
+<div id="sosBanner" class="sos-banner" hidden>
+  <div class="wrap sos-inner">
+    <!-- Blinking white dot + "SOS ACTIVE" + the emergency message -->
+    <span class="pulse"></span><b>SOS ACTIVE</b><span class="msg" id="sosBannerText"></span>
+    <!-- BUTTON: Clear SOS - turns emergency mode off (board back to normal, buzzer stops, green LED on) -->
+    <button class="btn btn-light btn-sm" data-action="clearSos">Clear SOS</button>
+  </div>
+</div>
+
+<!-- Top bar -->
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <div class="logo">NB</div>
+      <div><div class="brand-title">Smart Notice Board</div><div class="brand-sub">Admin dashboard &middot; DBIT IT Dept.</div></div>
+    </div>
+    <div class="top-right">
+      <span id="demoTag" class="demo-tag" title="Showing fake data, not the real board">DEMO</span>
+      <div class="conn"><span id="connDot" class="dot"></span><span id="connText">Connecting...</span></div>
+      <div class="clock"><div id="clkTime">--:--:--</div><div id="clkDate">Board time</div></div>
+      <button id="demoBtn" class="btn btn-ghost-dark btn-sm">Use real board</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Summary cards -->
+  <section class="stats">
+    <div class="stat" style="--c:#16a34a"><div class="stat-label">Active now</div><div class="stat-value" id="stActive">-</div><div class="stat-note">Showing on the board</div></div>
+    <div class="stat" style="--c:#2563eb"><div class="stat-label">Scheduled</div><div class="stat-value" id="stScheduled">-</div><div class="stat-note">Will show later</div></div>
+    <div class="stat" style="--c:#94a3b8"><div class="stat-label">Expired</div><div class="stat-value" id="stExpired">-</div><div class="stat-note">Time is over</div></div>
+    <div class="stat" id="stBoardCard" style="--c:#94a3b8"><div class="stat-label">Board</div><div class="stat-value" id="stBoard">-</div><div class="stat-note" id="stBoardNote">&nbsp;</div></div>
+  </section>
+
+  <div class="grid">
+    <!-- Notices -->
+    <section class="card">
+      <div class="card-head">
+        <div><h2>Notices</h2><p class="muted">Everything posted to the board. Urgent notices are shown first.</p></div>
+        <button class="btn btn-primary" data-action="newNotice">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New notice
+        </button>
+      </div>
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-filter="all">All<span class="count" id="cAll">0</span></button>
+        <button class="tab" data-filter="active">Active<span class="count" id="cActive">0</span></button>
+        <button class="tab" data-filter="scheduled">Scheduled<span class="count" id="cScheduled">0</span></button>
+        <button class="tab" data-filter="expired">Expired<span class="count" id="cExpired">0</span></button>
+      </div>
+      <div class="list" id="list"></div>
+      <div class="card-foot">
+        <span class="muted" id="listNote">&nbsp;</span>
+        <button class="btn btn-danger-ghost btn-sm" data-action="clearAll">Clear all</button>
+      </div>
+    </section>
+
+    <!-- Right column -->
+    <aside class="side">
+      <section class="card card-pad emergency">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v4M12 17.5v.5"/></svg>
+          <h2>Emergency</h2>
+        </div>
+        <div id="sosOff">
+          <p class="muted" style="font-size:13px;margin-bottom:14px">The board will flash red, beep every few seconds and blink the red LED until you clear it.</p>
+          <button class="btn btn-danger sos-big" data-action="openSos">START SOS</button>
+          <!-- Always-visible stop button: works even if the dashboard missed that SOS started (e.g. from the board's button) -->
+          <button class="btn btn-secondary btn-block" style="margin-top:10px" data-action="clearSos">Stop SOS</button>
+        </div>
+        <div id="sosOn" hidden>
+          <div class="sos-live"><b><span class="pulse"></span>SOS IS ACTIVE</b><div id="sosSideText" style="margin-top:4px;font-size:13px"></div></div>
+          <button class="btn btn-secondary btn-block" data-action="clearSos">Clear SOS</button>
+        </div>
+      </section>
+
+      <section class="card card-pad">
+        <div class="section-title"><h2>Board controls</h2></div>
+        <div class="controls">
+          <button class="btn btn-secondary btn-block" data-action="next">Show next notice</button>
+          <button class="btn btn-secondary btn-block" data-action="syncClock">Sync clock with this laptop</button>
+          <div class="rotate">
+            <label for="rotateIn">Rotate every</label>
+            <input id="rotateIn" class="input" type="number" min="3" max="60" value="8">
+            <span class="muted">sec</span>
+            <button class="btn btn-primary btn-sm" data-action="saveRotate">Save</button>
+          </div>
+          <!-- Default message: shown on the board when there are no notices -->
+          <div class="idle">
+            <label for="idleIn">Default message <span class="counter" id="cIdle">0/150</span></label>
+            <textarea id="idleIn" class="input" maxlength="150" placeholder="Shown when there are no notices"></textarea>
+            <button class="btn btn-primary btn-sm" data-action="saveIdle">Save message</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card card-pad">
+        <div class="section-title"><h2>System</h2></div>
+        <dl class="kv" style="margin:0">
+          <dt>Clock module</dt><dd id="sysRtc">-</dd>
+          <dt>Running for</dt><dd id="sysUp">-</dd>
+          <dt>Free memory</dt><dd id="sysHeap">-</dd>
+          <dt>Devices on WiFi</dt><dd id="sysClients">-</dd>
+          <dt>WiFi name</dt><dd>SmartNoticeBoard</dd>
+          <dt>Address</dt><dd>192.168.4.1</dd>
+        </dl>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<!-- New / edit notice drawer -->
+<div id="overlay" class="overlay" hidden></div>
+<aside id="drawer" class="drawer" aria-hidden="true">
+  <div class="drawer-head">
+    <div><h2 id="drawerTitle">New notice</h2><p class="muted" id="drawerSub">It will appear on the board right away.</p></div>
+    <button class="icon-btn" data-action="closeDrawer" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <form id="form" class="drawer-body" novalidate>
+    <div class="field">
+      <label for="fTitle">Title <span class="counter" id="cTitle">0/40</span></label>
+      <input id="fTitle" class="input" maxlength="40" placeholder="e.g. Mid-semester exam timetable" autocomplete="off">
+      <div class="err" id="eTitle" hidden></div>
+    </div>
+    <div class="field">
+      <label for="fText">Message <span class="counter" id="cText">0/300</span></label>
+      <textarea id="fText" class="input" maxlength="300" placeholder="Type the full notice here"></textarea>
+      <div class="err" id="eText" hidden></div>
+    </div>
+    <div class="two">
+      <div class="field">
+        <label for="fCat">Category</label>
+        <div class="cat-wrap" id="catWrap"><span class="swatch"></span>
+          <select id="fCat" class="input">
+            <option>General</option><option>Exam</option><option>Event</option><option>Placement</option><option>Urgent</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">Priority</span>
+        <div class="seg">
+          <input type="radio" name="prio" id="pN" value="normal" checked><label for="pN">Normal</label>
+          <input type="radio" name="prio" id="pH" value="high"><label for="pH">High</label>
+          <input type="radio" name="prio" id="pU" value="urgent"><label for="pU">Urgent</label>
+        </div>
+      </div>
+    </div>
+    <!-- Optional QR link: the board shows it as a QR code beside the notice -->
+    <div class="field">
+      <label for="fQr">QR code link <span class="counter">optional</span></label>
+      <input id="fQr" class="input" maxlength="120" placeholder="e.g. https://forms.gle/abc123" autocomplete="off">
+      <div class="hint">Shown as a QR code on the board. Students scan it with their phone. Shorter links scan better.</div>
+      <div class="err" id="eQr" hidden></div>
+    </div>
+    <div class="two">
+      <div class="field">
+        <label for="fStart">Show from</label>
+        <input id="fStart" class="input" type="datetime-local">
+        <div class="hint">Empty = show now</div>
+      </div>
+      <div class="field">
+        <label for="fEnd">Show until</label>
+        <input id="fEnd" class="input" type="datetime-local">
+        <div class="hint" id="hEnd">Empty = never expires</div>
+        <div class="err" id="eEnd" hidden></div>
+      </div>
+    </div>
+    <!-- Quick duration buttons: one click fills "Show until" (counted from "Show from", or from now) -->
+    <div class="field">
+      <span class="label">Quick duration</span>
+      <div class="chips" id="chips">
+        <button type="button" class="chip" data-dur="3600">1 hour</button>
+        <button type="button" class="chip" data-dur="7200">2 hours</button>
+        <button type="button" class="chip" data-dur="10800">3 hours</button>
+        <button type="button" class="chip" data-dur="eod">Rest of today</button>
+        <button type="button" class="chip" data-dur="86400">1 day</button>
+        <button type="button" class="chip" data-dur="604800">1 week</button>
+      </div>
+    </div>
+  </form>
+  <div class="drawer-foot">
+    <button class="btn btn-secondary" data-action="closeDrawer" id="cancelBtn">Cancel</button>
+    <button class="btn btn-primary" id="submitBtn" data-action="submit">Post to board</button>
+  </div>
+</aside>
+
+<!-- SOS dialog -->
+<div id="sosModal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-body">
+      <div class="modal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v4M12 17.5v.5"/></svg></div>
+      <h2>Start emergency alert</h2>
+      <p class="muted">Pick a message. It will flash on the board until someone clears it.</p>
+      <div class="presets" id="presets"></div>
+      <div class="field" style="margin:0">
+        <label for="sosCustom">Or type your own message <span class="counter" id="cSos">0/120</span></label>
+        <textarea id="sosCustom" class="input" maxlength="120" style="min-height:70px" placeholder="Custom emergency message"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-action="closeSos">Cancel</button>
+      <button class="btn btn-danger" id="sosStartBtn" data-action="startSos" disabled>Start SOS</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm dialog -->
+<div id="confirmModal" class="modal" hidden>
+  <div class="modal-box small">
+    <div class="modal-body">
+      <div class="modal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></div>
+      <h2 id="cfTitle">Are you sure?</h2>
+      <p class="muted" id="cfText"></p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" id="cfNo">Cancel</button>
+      <button class="btn btn-danger" id="cfYes">Yes, delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts" class="toasts"></div>
+
+<script>
+/* ================= Settings ================= */
+// Opened from the board itself -> same address. Opened from VS Code / file -> talk to 192.168.4.1
+var API_BASE = (location.hostname === '192.168.4.1') ? '' : 'http://192.168.4.1';
+var REFRESH_MS = 4000;
+var CATS = { General:'#64748b', Exam:'#d97706', Event:'#16a34a', Placement:'#0284c7', Urgent:'#dc2626' };
+var PRIO_RANK = { urgent:0, high:1, normal:2 };
+var STATE_RANK = { active:0, scheduled:1, expired:2 };
+var PRESETS = [
+  { name:'FIRE DRILL', msg:'FIRE DRILL - Evacuate the building now' },
+  { name:'MEDICAL', msg:'MEDICAL EMERGENCY - Help needed' },
+  { name:'LOCKDOWN', msg:'LOCKDOWN - Stay inside, lock doors' },
+  { name:'EARTHQUAKE', msg:'EARTHQUAKE - Move to open area' }
+];
+var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/* ================= State ================= */
+var demo = true;
+try { demo = localStorage.getItem('snb_demo') !== '0'; } catch (e) {}
+var notices = [], status = null, online = null, filter = 'all', editId = null;
+var clockBase = null, refreshing = false, sosChoice = '';
+var idleDirty = false;   // true while the default message has unsaved changes
+
+/* ================= Helpers ================= */
+function $(id) { return document.getElementById(id); }
+// Local time as "epoch" (same format the board's clock uses)
+function nowLocal() { return Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 1000); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtDate(e) { var d = new Date(e * 1000); return pad(d.getUTCDate()) + ' ' + MONTHS[d.getUTCMonth()] + ', ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()); }
+function toInput(e) { return e ? new Date(e * 1000).toISOString().slice(0, 16) : ''; }
+function fromInput(v) { return v ? Math.floor(Date.parse(v + ':00Z') / 1000) : 0; }
+function fmtUptime(s) {
+  var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  return d ? d + 'd ' + h + 'h' : h ? h + 'h ' + m + 'm' : m + 'm ' + (s % 60) + 's';
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+// The board's fonts only know plain English letters, so swap/strip special characters
+function toAscii(s) {
+  return String(s)
+    .replace(/[‘’‚′]/g, "'").replace(/[“”„″]/g, '"')
+    .replace(/[–—−]/g, '-').replace(/…/g, '...').replace(/₹/g, 'Rs ')
+    .replace(/ /g, ' ').replace(/[^\x20-\x7E\n]/g, '').trim();
+}
+function stateOf(n, now) {
+  if (n.start && n.start > now) return 'scheduled';
+  if (n.end && now >= n.end) return 'expired';
+  return 'active';
+}
+function toast(msg, type) {
+  var t = document.createElement('div');
+  t.className = 'toast' + (type === 'err' ? ' err' : '');
+  t.textContent = msg;
+  $('toasts').appendChild(t);
+  setTimeout(function () { t.remove(); }, 3200);
+}
+// Grey out a button while its request is running
+async function busy(btn, fn) {
+  if (btn && btn.disabled) return;
+  if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+  try { await fn(); }
+  catch (e) { toast(e.message || 'Something went wrong', 'err'); }
+  finally { if (btn) { btn.disabled = false; btn.classList.remove('loading'); } }
+}
+
+/* ================= Demo data (fake board) ================= */
+var mock = { seq: 5, rotate: 8, idle: 'Welcome to Don Bosco Institute of Technology - Department of Information Technology', started: Date.now(), sos: { active: false, message: '' }, notices: [] };
+(function seed() {
+  var n = nowLocal(), h = 3600, d = 86400;
+  mock.notices = [
+    { id:1, title:'Mid-semester exam timetable', text:'Mid-sem exams start Monday 13 Oct at 9:30 am. Check the IT department notice board for the full timetable and seating plan.', category:'Exam', priority:'high', start:0, end:n + 5*d, created:n - 2*h },
+    { id:2, title:'TCS campus drive - registration open', text:'Final year IT students: register on the placement portal before Friday 5 pm. Bring an updated resume and college ID card.', category:'Placement', priority:'normal', qr:'https://forms.gle/tcs-drive', start:0, end:n + 3*d, created:n - 5*h },
+    { id:3, title:'Annual day rehearsal', text:'All participants report to Hall B at 4 pm for the first rehearsal.', category:'Event', priority:'normal', start:n + d, end:n + 2*d, created:n - h },
+    { id:4, title:'Library closed on Saturday', text:'The central library will remain closed this Saturday for stock verification.', category:'General', priority:'normal', start:n - 4*d, end:n - d, created:n - 4*d },
+    { id:5, title:'Lab 302 power shutdown', text:'No practicals in Lab 302 today after 2 pm due to electrical maintenance work.', category:'Urgent', priority:'urgent', start:0, end:0, created:n - 1800 }
+  ];
+})();
+async function mockApi(method, path, body) {
+  await new Promise(function (r) { setTimeout(r, 300); });
+  var now = nowLocal(), parts = path.split('?'), p = parts[0];
+  var id = parts[1] ? Number(new URLSearchParams(parts[1]).get('id')) : 0;
+  function withState(x) { return Object.assign({}, x, { state: stateOf(x, now) }); }
+  if (p === '/api/status') {
+    var act = mock.notices.filter(function (x) { return stateOf(x, now) === 'active'; }).length;
+    return { epoch: now, rtc: true, uptime: 8040 + Math.floor((Date.now() - mock.started) / 1000), heap: 183400,
+             clients: 1, notices: mock.notices.length, active: act, rotate: mock.rotate, idle: mock.idle, sos: Object.assign({}, mock.sos) };
+  }
+  if (p === '/api/notices' && method === 'GET') return mock.notices.map(withState);
+  if (p === '/api/notices' && method === 'POST') { var x = Object.assign({}, body, { id: ++mock.seq, created: now }); mock.notices.push(x); return withState(x); }
+  if (p === '/api/notices' && method === 'PUT') {
+    var f = mock.notices.find(function (x) { return x.id === id; });
+    if (!f) throw new Error('Notice not found');
+    Object.assign(f, body); return withState(f);
+  }
+  if (p === '/api/notices' && method === 'DELETE') { mock.notices = mock.notices.filter(function (x) { return x.id !== id; }); return { ok: true }; }
+  if (p === '/api/notices/clear') { mock.notices = []; return { ok: true }; }
+  if (p === '/api/next' || p === '/api/time') return { ok: true };
+  if (p === '/api/sos') { mock.sos = { active: true, message: body.message }; return { ok: true }; }
+  if (p === '/api/sos/clear') { mock.sos = { active: false, message: '' }; return { ok: true }; }
+  if (p === '/api/settings') {
+    if (method === 'POST' && body.rotate) mock.rotate = body.rotate;
+    if (method === 'POST' && body.idle) mock.idle = body.idle;
+    return { rotate: mock.rotate, idle: mock.idle };
+  }
+  throw new Error('Unknown request');
+}
+
+/* ================= Talking to the board ================= */
+async function api(method, path, body) {
+  if (demo) return mockApi(method, path, body);
+  var ctl = new AbortController(), timer = setTimeout(function () { ctl.abort(); }, 5000);
+  try {
+    var opt = { method: method, signal: ctl.signal };
+    if (body !== undefined) { opt.headers = { 'Content-Type': 'application/json' }; opt.body = JSON.stringify(body); }
+    var r = await fetch(API_BASE + path, opt);
+    var txt = await r.text(), data = {};
+    try { data = txt ? JSON.parse(txt) : {}; } catch (e) { throw new Error('Board sent a reply the dashboard could not read'); }
+    if (!r.ok) throw new Error(data.error || ('Board error ' + r.status));
+    return data;
+  } catch (e) {
+    if (e.name === 'AbortError' || e instanceof TypeError) throw new Error('Could not reach the board - check the WiFi');
+    throw e;
+  } finally { clearTimeout(timer); }
+}
+
+async function refresh() {
+  if (refreshing) return;
+  refreshing = true;
+  try {
+    var res = await Promise.all([api('GET', '/api/status'), api('GET', '/api/notices')]);
+    // Make sure the board really answered with status data (not an empty/foreign reply)
+    if (!res[0] || typeof res[0].epoch !== 'number') throw new Error('Bad status reply');
+    status = res[0];
+    notices = Array.isArray(res[1]) ? res[1] : [];
+    clockBase = { epoch: status.epoch, at: Date.now() };
+    setOnline(true);
+    render();
+  } catch (e) {
+    setOnline(false);
+  } finally { refreshing = false; }
+}
+
+function setOnline(v) {
+  if (online === true && v === false) toast('Board offline - check that this laptop is on SmartNoticeBoard WiFi', 'err');
+  online = v;
+  $('connDot').className = 'dot ' + (v ? 'on' : 'off');
+  $('connText').textContent = v ? (demo ? 'Demo data' : 'Connected') : 'Board offline';
+  $('stBoard').textContent = v ? 'Online' : 'Offline';
+  $('stBoard').className = 'stat-value ' + (v ? 'ok-text' : 'bad-text');
+  $('stBoardCard').style.setProperty('--c', v ? '#16a34a' : '#dc2626');
+  if (!v) { $('stBoardNote').textContent = 'Not responding'; $('clkTime').textContent = '--:--:--'; clockBase = null; }
+}
+
+/* ================= Drawing the page ================= */
+function render() {
+  var now = status ? status.epoch : nowLocal();
+  notices.forEach(function (n) { if (!n.state) n.state = stateOf(n, now); });
+  var c = { active: 0, scheduled: 0, expired: 0 };
+  notices.forEach(function (n) { c[n.state]++; });
+
+  $('stActive').textContent = c.active;
+  $('stScheduled').textContent = c.scheduled;
+  $('stExpired').textContent = c.expired;
+  $('cAll').textContent = notices.length;
+  $('cActive').textContent = c.active;
+  $('cScheduled').textContent = c.scheduled;
+  $('cExpired').textContent = c.expired;
+
+  if (status) {
+    $('stBoardNote').textContent = 'Up for ' + fmtUptime(status.uptime);
+    $('sysRtc').innerHTML = status.rtc ? '<span class="ok-text">Working</span>' : '<span class="bad-text">Not found</span>';
+    $('sysUp').textContent = fmtUptime(status.uptime);
+    $('sysHeap').textContent = Math.round(status.heap / 1024) + ' KB';
+    $('sysClients').textContent = status.clients;
+    if (document.activeElement !== $('rotateIn')) $('rotateIn').value = status.rotate;
+    // Default message box (not while you are typing in it)
+    if (document.activeElement !== $('idleIn') && !idleDirty) {
+      $('idleIn').value = status.idle || '';
+      $('cIdle').textContent = $('idleIn').value.length + '/150';
+    }
+    var sos = status.sos || {};
+    $('sosBanner').hidden = !sos.active;
+    $('sosOff').hidden = !!sos.active;
+    $('sosOn').hidden = !sos.active;
+    $('sosBannerText').textContent = sos.message || '';
+    $('sosSideText').textContent = sos.message || '';
+  }
+  renderList();
+  tickClock();
+}
+
+function renderList() {
+  var list = notices.filter(function (n) { return filter === 'all' || n.state === filter; });
+  list.sort(function (a, b) {
+    return (STATE_RANK[a.state] - STATE_RANK[b.state]) ||
+           ((PRIO_RANK[a.priority] || 2) - (PRIO_RANK[b.priority] || 2)) ||
+           (b.created - a.created);
+  });
+  $('listNote').textContent = notices.length ? 'Showing ' + list.length + ' of ' + notices.length : '';
+
+  if (!list.length) {
+    $('list').innerHTML = notices.length
+      ? '<div class="empty"><b>Nothing here</b>No ' + filter + ' notices right now.</div>'
+      : '<div class="empty"><b>No notices yet</b>Click <b style="display:inline">New notice</b> to post your first one.</div>';
+    return;
+  }
+  var stateLabel = { active: 'Active', scheduled: 'Scheduled', expired: 'Expired' };
+  $('list').innerHTML = list.map(function (n) {
+    var color = CATS[n.category] || CATS.General;
+    var sched = !n.start && !n.end ? 'Always on'
+      : n.start && n.end ? fmtDate(n.start) + '  to  ' + fmtDate(n.end)
+      : n.start ? 'From ' + fmtDate(n.start) : 'Until ' + fmtDate(n.end);
+    var prio = n.priority && n.priority !== 'normal'
+      ? '<span class="prio ' + n.priority + '">' + (n.priority === 'urgent' ? 'Urgent' : 'High') + ' priority</span>' : '';
+    return '<article class="row ' + n.state + '" style="--c:' + color + '">' +
+      '<div class="row-main">' +
+        '<div class="row-top"><span class="tag">' + esc(n.category) + '</span>' + prio + '<h3>' + esc(n.title) + '</h3></div>' +
+        '<p>' + esc(n.text) + '</p>' +
+        '<div class="row-meta">' +
+          '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' + sched + '</span>' +
+          (n.created ? '<span>Posted ' + fmtDate(n.created) + '</span>' : '') +
+          (n.qr ? '<span title="' + esc(n.qr) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3z"/></svg>QR: ' + esc(n.qr.length > 32 ? n.qr.slice(0, 32) + '...' : n.qr) + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="row-side">' +
+        '<span class="badge b-' + n.state + '">' + stateLabel[n.state] + '</span>' +
+        '<div class="row-actions">' +
+          '<button class="icon-btn" title="Edit" data-edit="' + n.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg></button>' +
+          '<button class="icon-btn danger" title="Delete" data-del="' + n.id + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>' +
+        '</div>' +
+      '</div>' +
+    '</article>';
+  }).join('');
+}
+
+function tickClock() {
+  if (!clockBase) return;
+  var e = clockBase.epoch + Math.floor((Date.now() - clockBase.at) / 1000);
+  var d = new Date(e * 1000);
+  $('clkTime').textContent = pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds());
+  $('clkDate').textContent = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getUTCDay()] + ', ' + d.getUTCDate() + ' ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+}
+
+function renderDemo() {
+  $('demoTag').hidden = !demo;
+  $('demoBtn').textContent = demo ? 'Use real board' : 'Demo mode';
+}
+
+/* ================= New / edit drawer ================= */
+function openDrawer(n) {
+  editId = n ? n.id : null;
+  $('drawerTitle').textContent = n ? 'Edit notice' : 'New notice';
+  $('drawerSub').textContent = n ? 'Changes update the board right away.' : 'It will appear on the board right away.';
+  $('submitBtn').textContent = n ? 'Save changes' : 'Post to board';
+  $('cancelBtn').textContent = n ? 'Cancel edit' : 'Cancel';
+  $('fTitle').value = n ? n.title : '';
+  $('fText').value = n ? n.text : '';
+  $('fCat').value = n ? n.category : 'General';
+  $('fQr').value = n ? (n.qr || '') : '';
+  document.querySelector('input[name=prio][value=' + (n ? n.priority : 'normal') + ']').checked = true;
+  $('fStart').value = n ? toInput(n.start) : '';
+  $('fEnd').value = n ? toInput(n.end) : '';
+  clearErrors(); updateCounters(); updateSwatch(); updateEndHint();
+  document.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('sel'); });
+  $('overlay').hidden = false;
+  $('drawer').classList.add('open');
+  $('drawer').setAttribute('aria-hidden', 'false');
+  setTimeout(function () { $('fTitle').focus(); }, 200);
+}
+function closeDrawer() {
+  $('drawer').classList.remove('open');
+  $('drawer').setAttribute('aria-hidden', 'true');
+  $('overlay').hidden = true;
+  editId = null;
+}
+function updateCounters() {
+  var t = $('fTitle').value.length, m = $('fText').value.length;
+  $('cTitle').textContent = t + '/40'; $('cTitle').classList.toggle('warn', t >= 36);
+  $('cText').textContent = m + '/300'; $('cText').classList.toggle('warn', m >= 270);
+}
+function updateSwatch() { $('catWrap').style.setProperty('--c', CATS[$('fCat').value]); }
+// Hint under "Show until": tells in words when the notice will disappear
+function updateEndHint() {
+  var e = fromInput($('fEnd').value);
+  $('hEnd').textContent = e ? 'Disappears at ' + fmtDate(e) : 'Empty = never expires';
+}
+// Quick duration button: end time = start time (or now) + chosen duration
+function applyDuration(chip) {
+  var base = fromInput($('fStart').value) || nowLocal();
+  base -= base % 60;                                              // whole minutes
+  var dur = chip.dataset.dur;
+  var end = dur === 'eod' ? base - base % 86400 + 86400 - 60     // today 23:59
+                          : base + Number(dur);
+  $('fEnd').value = toInput(end);
+  document.querySelectorAll('.chip').forEach(function (c) { c.classList.toggle('sel', c === chip); });
+  $('fEnd').classList.remove('invalid'); $('eEnd').hidden = true;
+  updateEndHint();
+}
+function showErr(field, id, msg) { $(field).classList.add('invalid'); $(id).textContent = msg; $(id).hidden = false; }
+function clearErrors() {
+  ['fTitle', 'fText', 'fQr', 'fEnd'].forEach(function (f) { $(f).classList.remove('invalid'); });
+  ['eTitle', 'eText', 'eQr', 'eEnd'].forEach(function (e) { $(e).hidden = true; });
+}
+
+async function submitForm() {
+  clearErrors();
+  var body = {
+    title: toAscii($('fTitle').value),
+    text: toAscii($('fText').value),
+    category: $('fCat').value,
+    priority: document.querySelector('input[name=prio]:checked').value,
+    qr: toAscii($('fQr').value),
+    start: fromInput($('fStart').value),
+    end: fromInput($('fEnd').value)
+  };
+  var ok = true;
+  if (!body.title) { showErr('fTitle', 'eTitle', 'Please enter a title.'); ok = false; }
+  if (!body.text) { showErr('fText', 'eText', 'Please enter the message.'); ok = false; }
+  if (/\s/.test(body.qr)) { showErr('fQr', 'eQr', 'A link cannot contain spaces.'); ok = false; }
+  if (body.end && body.start && body.end <= body.start) { showErr('fEnd', 'eEnd', '"Show until" must be after "Show from".'); ok = false; }
+  else if (body.end && body.end <= nowLocal()) { showErr('fEnd', 'eEnd', 'This time is already in the past.'); ok = false; }
+  if (!ok) return;
+
+  await busy($('submitBtn'), async function () {
+    if (editId) { await api('PUT', '/api/notices?id=' + editId, body); toast('Notice updated'); }
+    else { await api('POST', '/api/notices', body); toast('Posted to the board'); }
+    closeDrawer();
+    await refresh();
+  });
+}
+
+/* ================= Dialogs ================= */
+var confirmResolve = null;
+function confirmBox(title, text, yes) {
+  $('cfTitle').textContent = title;
+  $('cfText').textContent = text;
+  $('cfYes').textContent = yes;
+  $('confirmModal').hidden = false;
+  return new Promise(function (r) { confirmResolve = r; });
+}
+function closeConfirm(v) { $('confirmModal').hidden = true; if (confirmResolve) confirmResolve(v); confirmResolve = null; }
+
+function openSos() {
+  sosChoice = '';
+  $('sosCustom').value = '';
+  $('cSos').textContent = '0/120';
+  $('presets').innerHTML = PRESETS.map(function (p, i) {
+    return '<button class="preset" data-preset="' + i + '"><b>' + p.name + '</b><span>' + esc(p.msg.split(' - ')[1]) + '</span></button>';
+  }).join('');
+  $('sosStartBtn').disabled = true;
+  $('sosModal').hidden = false;
+}
+function closeSos() { $('sosModal').hidden = true; }
+
+/* ================= Button actions ================= */
+var actions = {
+  newNotice: function () { openDrawer(null); },
+  closeDrawer: closeDrawer,
+  submit: submitForm,
+  openSos: openSos,
+  closeSos: closeSos,
+  startSos: function (btn) {
+    return busy(btn, async function () {
+      await api('POST', '/api/sos', { message: toAscii(sosChoice) });
+      closeSos(); toast('SOS started on the board', 'err');
+      // Show the SOS banner + Clear SOS right away (don't wait for the next refresh)
+      if (status) { status.sos = { active: true, message: toAscii(sosChoice) }; render(); }
+      await refresh();
+    });
+  },
+  clearSos: function (btn) {
+    return busy(btn, async function () {
+      await api('POST', '/api/sos/clear');
+      toast('SOS cleared - board back to normal');
+      // Hide the SOS banner right away
+      if (status) { status.sos = { active: false, message: '' }; render(); }
+      await refresh();
+    });
+  },
+  next: function (btn) {
+    return busy(btn, async function () { await api('POST', '/api/next'); toast('Board is showing the next notice'); });
+  },
+  syncClock: function (btn) {
+    return busy(btn, async function () {
+      await api('POST', '/api/time', { t: nowLocal() });
+      toast('Board clock synced with this laptop');
+      await refresh();
+    });
+  },
+  saveRotate: function (btn) {
+    var v = Number($('rotateIn').value);
+    if (!(v >= 3 && v <= 60)) { toast('Rotation must be between 3 and 60 seconds', 'err'); return; }
+    return busy(btn, async function () {
+      await api('POST', '/api/settings', { rotate: Math.round(v) });
+      toast('Each notice now shows for ' + Math.round(v) + ' seconds');
+      await refresh();
+    });
+  },
+  // BUTTON: "Save message" under Default message
+  saveIdle: function (btn) {
+    var v = toAscii($('idleIn').value);
+    if (!v) { toast('The default message cannot be empty', 'err'); return; }
+    return busy(btn, async function () {
+      await api('POST', '/api/settings', { idle: v });
+      idleDirty = false;
+      toast('Default message saved');
+      await refresh();
+    });
+  },
+  clearAll: async function (btn) {
+    if (!notices.length) { toast('There are no notices to clear', 'err'); return; }
+    if (!await confirmBox('Delete all notices?', 'All ' + notices.length + ' notices will be removed from the board. This cannot be undone.', 'Yes, delete all')) return;
+    return busy(btn, async function () {
+      await api('POST', '/api/notices/clear');
+      toast('All notices deleted');
+      await refresh();
+    });
+  }
+};
+
+document.addEventListener('click', async function (e) {
+  var el = e.target.closest('[data-action],[data-edit],[data-del],[data-filter],[data-preset],[data-dur]');
+  if (!el) return;
+  if (el.dataset.dur) { applyDuration(el); return; }
+  if (el.dataset.action) { e.preventDefault(); actions[el.dataset.action](el); return; }
+  if (el.dataset.filter) {
+    filter = el.dataset.filter;
+    document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('active', t === el); });
+    renderList(); return;
+  }
+  if (el.dataset.preset) {
+    document.querySelectorAll('.preset').forEach(function (p) { p.classList.toggle('sel', p === el); });
+    sosChoice = PRESETS[el.dataset.preset].msg;
+    $('sosCustom').value = ''; $('cSos').textContent = '0/120';
+    $('sosStartBtn').disabled = false; return;
+  }
+  var id = Number(el.dataset.edit || el.dataset.del);
+  var n = notices.find(function (x) { return x.id === id; });
+  if (!n) return;
+  if (el.dataset.edit) { openDrawer(n); return; }
+  if (await confirmBox('Delete this notice?', '"' + n.title + '" will be removed from the board.', 'Yes, delete')) {
+    busy(el, async function () {
+      await api('DELETE', '/api/notices?id=' + id);
+      toast('Notice deleted');
+      await refresh();
+    });
+  }
+});
+
+$('fTitle').addEventListener('input', updateCounters);
+$('fText').addEventListener('input', updateCounters);
+$('fCat').addEventListener('change', updateSwatch);
+// Default message: live counter + remember there are unsaved changes
+$('idleIn').addEventListener('input', function () {
+  idleDirty = true;
+  $('cIdle').textContent = this.value.length + '/150';
+});
+// Typing a time by hand: un-highlight the quick buttons and update the hint
+$('fEnd').addEventListener('input', function () {
+  document.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('sel'); });
+  updateEndHint();
+});
+$('form').addEventListener('submit', function (e) { e.preventDefault(); submitForm(); });
+$('overlay').addEventListener('click', closeDrawer);
+$('cfYes').addEventListener('click', function () { closeConfirm(true); });
+$('cfNo').addEventListener('click', function () { closeConfirm(false); });
+$('sosCustom').addEventListener('input', function () {
+  var v = this.value;
+  $('cSos').textContent = v.length + '/120';
+  document.querySelectorAll('.preset').forEach(function (p) { p.classList.remove('sel'); });
+  sosChoice = v.trim();
+  $('sosStartBtn').disabled = !sosChoice;
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  if (!$('confirmModal').hidden) closeConfirm(false);
+  else if (!$('sosModal').hidden) closeSos();
+  else if ($('drawer').classList.contains('open')) closeDrawer();
+});
+$('demoBtn').addEventListener('click', function () {
+  demo = !demo;
+  try { localStorage.setItem('snb_demo', demo ? '1' : '0'); } catch (e) {}
+  online = null; status = null; notices = []; clockBase = null;
+  renderDemo(); render();
+  $('connDot').className = 'dot'; $('connText').textContent = 'Connecting...';
+  refresh();
+});
+
+/* ================= Start ================= */
+renderDemo();
+render();
+refresh();
+setInterval(refresh, REFRESH_MS);
+setInterval(tickClock, 1000);
+</script>
+</body>
+</html>

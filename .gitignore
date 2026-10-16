@@ -1,0 +1,31 @@
+# ---------- Windows / macOS system files ----------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# ---------- Editors ----------
+.vscode/
+.idea/
+*.swp
+*~
+
+# ---------- Arduino / ESP32 build output ----------
+build/
+*.bin
+*.elf
+*.map
+*.hex
+*.o
+*.a
+firmware/**/build/
+firmware/**/.arduino/
+
+# ---------- Claude Code local files ----------
+.claude/
+
+# ---------- Temporary / backup files ----------
+*.tmp
+*.bak
+*.log
